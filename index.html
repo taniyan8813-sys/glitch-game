@@ -1,226 +1,100 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GLITCH RUNNER</title>
-  <style>
-    body {
-      margin: 0;
-      background: #050509;
-      color: white;
-      font-family: sans-serif;
-      text-align: center;
-      overflow: hidden;
-    }
-
-    h1 {
-      font-size: 24px;
-      margin: 12px 0 4px;
-      color: #ff3355;
-      text-shadow: 2px 0 #00ffff;
-    }
-
-    #game {
-      display: block;
-      margin: 0 auto;
-      background: linear-gradient(#0b0b16, #111122);
-      border: 2px solid #ff3355;
-      max-width: 100%;
-      touch-action: none;
-    }
-
-    #ui {
-      margin: 8px;
-      font-size: 14px;
-      color: #ddd;
-    }
-
-    #adBox {
-      width: 320px;
-      height: 50px;
-      margin: 10px auto;
-      border: 1px dashed #555;
-      color: #777;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-    }
-
-    button {
-      background: #ff3355;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      font-size: 16px;
-      border-radius: 8px;
-      margin-top: 8px;
-    }
-
-    footer {
-      font-size: 12px;
-      margin-top: 8px;
-    }
-
-    a {
-      color: #88ffff;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLITCH SURVIVE</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <main id="gameScreen" class="game-screen">
+    <header class="game-hud">
+      <div class="hud-panel hud-status" aria-label="Player status">
+        <div class="status-row status-row-compact">
+          <span class="status-label">LV</span>
+          <span id="levelValue" class="status-value">1</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">HP</span>
+          <div class="status-bar" aria-hidden="true">
+            <div id="hpFill" class="status-fill hp-fill"></div>
+          </div>
+          <span id="hpValue" class="status-value">3/3</span>
+        </div>
+      </div>
 
-  <h1>GLITCH RUNNER</h1>
-  <div id="ui">Score: <span id="score">0</span> / Best: <span id="best">0</span></div>
+      <h1 class="hud-title">GLITCH SURVIVE</h1>
 
-  <canvas id="game" width="360" height="520"></canvas>
+      <div class="hud-panel hud-metrics" aria-label="Survival status">
+        <div class="metric">
+          <span class="score-label">TIME</span>
+          <span id="timeValue" class="score-value">0:00</span>
+        </div>
+        <div class="metric">
+          <span class="score-label">KILLS</span>
+          <span id="killsValue" class="score-value">0</span>
+        </div>
+      </div>
 
-  <div id="adBox">
-    広告スペース：AdSense審査後にここへ広告コード
-  </div>
+      <div class="hud-panel hud-exp" aria-label="Experience">
+        <div class="status-row">
+          <span class="status-label">EXP</span>
+          <div class="status-bar" aria-hidden="true">
+            <div id="expFill" class="status-fill exp-fill"></div>
+          </div>
+          <span id="expValue" class="status-value">0%</span>
+        </div>
+      </div>
+      <button id="muteButton" class="mute-button" type="button" aria-pressed="false">MUTE</button>
+    </header>
 
-  <button onclick="restartGame()">RETRY</button>
+    <div id="virtualJoystick" class="virtual-joystick" aria-hidden="true">
+      <div id="joystickKnob" class="joystick-knob"></div>
+    </div>
 
-  <footer>
-    <a href="privacy.html">プライバシーポリシー</a>
-  </footer>
+    <div id="bulletLayer" class="bullet-layer" aria-hidden="true"></div>
+    <div id="enemyLayer" class="enemy-layer" aria-hidden="true"></div>
+    <div id="attackLayer" class="attack-layer" aria-hidden="true"></div>
+    <div id="expLayer" class="exp-layer" aria-hidden="true"></div>
+    <div id="hitFlash" class="hit-flash" aria-hidden="true"></div>
 
-<script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+    <div id="player" class="player">
+      <div class="player-visual">
+        <img id="glitchImage" class="glitch-image glitch-image-normal" src="assets/player_idle.png" alt="Glitch">
+        <img class="glitch-image glitch-image-bug" src="assets/player_glitch.png" alt="" aria-hidden="true">
+        <img class="glitch-image glitch-image-hit" src="assets/player_glitch.png" alt="" aria-hidden="true">
+        <img class="glitch-noise" src="assets/glitch_effect.png" alt="" aria-hidden="true">
+      </div>
+    </div>
+    <div id="hitboxDebug" class="hitbox-debug" hidden></div>
 
-let player, obstacles, particles, score, best, gameOver, speed;
-best = localStorage.getItem("glitchBest") || 0;
-document.getElementById("best").textContent = best;
+    <p id="imageError" class="image-error" hidden>画像が見つかりません</p>
 
-function reset() {
-  player = {
-    x: 160,
-    y: 430,
-    w: 36,
-    h: 36,
-    targetX: 160
-  };
+    <section id="upgradePanel" class="upgrade-panel" hidden>
+      <div class="upgrade-content">
+        <p class="upgrade-kicker">LEVEL UP</p>
+        <h2>CHOOSE UPGRADE</h2>
+        <div id="upgradeOptions" class="upgrade-options"></div>
+      </div>
+    </section>
 
-  obstacles = [];
-  particles = [];
-  score = 0;
-  speed = 3;
-  gameOver = false;
-}
-
-function restartGame() {
-  reset();
-}
-
-function spawnObstacle() {
-  const size = 28 + Math.random() * 28;
-  obstacles.push({
-    x: Math.random() * (canvas.width - size),
-    y: -size,
-    w: size,
-    h: size,
-    glitch: Math.random() > 0.5
-  });
-}
-
-function drawPlayer() {
-  ctx.fillStyle = "#ff3355";
-  ctx.fillRect(player.x, player.y, player.w, player.h);
-
-  ctx.fillStyle = "#00ffff";
-  ctx.fillRect(player.x + 6, player.y + 8, 8, 8);
-
-  if (Math.random() > 0.75) {
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(player.x - 5, player.y + Math.random() * 30, player.w, 3);
-  }
-}
-
-function drawObstacle(o) {
-  ctx.fillStyle = o.glitch ? "#8a2be2" : "#00ffff";
-  ctx.fillRect(o.x, o.y, o.w, o.h);
-
-  if (o.glitch) {
-    ctx.fillStyle = "#ff3355";
-    ctx.fillRect(o.x + Math.random() * 10 - 5, o.y + 10, o.w, 4);
-  }
-}
-
-function collide(a, b) {
-  return (
-    a.x < b.x + b.w &&
-    a.x + a.w > b.x &&
-    a.y < b.y + b.h &&
-    a.y + a.h > b.y
-  );
-}
-
-function update() {
-  if (gameOver) {
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#ff3355";
-    ctx.font = "28px sans-serif";
-    ctx.fillText("GAME OVER", 92, 240);
-    ctx.font = "14px sans-serif";
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText("RETRYを押して再挑戦", 108, 270);
-    return;
-  }
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // 背景グリッチ線
-  for (let i = 0; i < 8; i++) {
-    ctx.fillStyle = Math.random() > 0.5 ? "#15152a" : "#221122";
-    ctx.fillRect(0, Math.random() * canvas.height, canvas.width, 1);
-  }
-
-  player.x += (player.targetX - player.x) * 0.2;
-  drawPlayer();
-
-  if (Math.random() < 0.035) spawnObstacle();
-
-  obstacles.forEach((o, i) => {
-    o.y += speed;
-    drawObstacle(o);
-
-    if (collide(player, o)) {
-      gameOver = true;
-
-      if (score > best) {
-        best = score;
-        localStorage.setItem("glitchBest", best);
-        document.getElementById("best").textContent = best;
-      }
-    }
-
-    if (o.y > canvas.height) {
-      obstacles.splice(i, 1);
-      score++;
-      speed += 0.03;
-      document.getElementById("score").textContent = score;
-    }
-  });
-
-  requestAnimationFrame(update);
-}
-
-canvas.addEventListener("mousemove", e => {
-  const rect = canvas.getBoundingClientRect();
-  player.targetX = e.clientX - rect.left - player.w / 2;
-});
-
-canvas.addEventListener("touchmove", e => {
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  player.targetX = e.touches[0].clientX - rect.left - player.w / 2;
-}, { passive: false });
-
-reset();
-update();
-</script>
-
+    <section id="gameOverPanel" class="game-over-panel" hidden>
+      <div class="game-over-content">
+        <p class="game-over-kicker">GLITCH DETECTED</p>
+        <h2>GAME OVER</h2>
+        <button id="restartButton" type="button">もう一度プレイ</button>
+      </div>
+    </section>
+  </main>
+  <script src="script.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+

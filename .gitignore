@@ -1,0 +1,12 @@
+# Local backups and generated working files
+*.bak*
+*.history-*.md
+old*/
+old_*/
+*_preview.png
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+
